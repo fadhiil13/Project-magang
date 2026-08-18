@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  nama      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  beritaAcara BeritaAcara[]
+}
+
+model BeritaAcara {
+  id              Int      @id @default(autoincrement())
+  noRef           String   @unique
+  // @db.Date -> disimpan sebagai DATE murni (tanpa jam), biar nggak kegeser
+  // saat konversi timezone WIB <-> UTC waktu di-render ke dokumen.
+  tanggal         DateTime @db.Date
+  businessArea    String
+  unitKerja       String
+  tempatKedudukan String
+  analisa         String   @db.Text
+  tindakLanjut    String?  @db.Text
+
+  // Tanda tangan — Pimpinan Unit Kerja
+  ttdPimpinanUnitKerja     String?
+  namaPimpinanUnitKerja    String?
+  nipPimpinanUnitKerja     String?
+  jabatanPimpinanUnitKerja String?
+
+  // Tanda tangan — Pimpinan IT
+  ttdPimpinanIT  String?
+  namaPimpinanIT String?
+
+  // Path dokumen di MinIO
+  docxPath String?
+  pdfPath  String?
+
+  // Ditandai true setiap kali data di-PATCH, supaya dokumen lama
+  // nggak ke-download padahal isinya udah basi. Di-set false lagi
+  // setelah generate ulang sukses.
+  dokumenStale Boolean @default(true)
+
+  // Relasi
+  userId   Int
+  user     User      @relation(fields: [userId], references: [id])
+  asetRows AsetRow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([tanggal])
+  @@index([businessArea])
+}
+
+model AsetRow {
+  id              Int    @id @default(autoincrement())
+  nomorUrut       Int
+  nomorInventaris String
+  serialNumber    String
+  jenisAset       String // String bebas, bukan enum. Frontend kasih dropdown + opsi "Lainnya"
+  merek           String
+  sumberData      String @default("")
+  keterangan      String @default("")
+
+  beritaAcaraId Int
+  beritaAcara   BeritaAcara @relation(fields: [beritaAcaraId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nomorInventaris])
+  @@index([serialNumber])
+  @@index([beritaAcaraId])
+}

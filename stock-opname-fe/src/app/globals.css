@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-kai-navy: #2D2B70;
+  --color-kai-orange: #F26924;
+  --color-kai-blue: #0E5BA9;
+  --color-kai-black: #1A1A2E;
+  --color-kai-gray-50: #F8F9FA;
+  --color-kai-gray-100: #E9ECEF;
+  --color-kai-gray-200: #DEE2E6;
+  --color-kai-gray-500: #6C757D;
+  --color-kai-gray-700: #495057;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
