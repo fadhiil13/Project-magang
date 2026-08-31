@@ -3,9 +3,11 @@
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BeritaAcaraForm from '@/components/form/BeritaAcaraForm';
+import { usePageTitle } from '@/lib/pageTitle';
 
 export default function CreateBeritaAcaraPage() {
   const router = useRouter();
+  usePageTitle('Buat Berita Acara Baru');
 
   return (
     <div className="space-y-6">
@@ -15,8 +17,6 @@ export default function CreateBeritaAcaraPage() {
       >
         <ArrowLeft className="w-4 h-4" /> Kembali ke daftar
       </button>
-
-      <h1 className="text-2xl font-bold text-kai-black">Buat Berita Acara Baru</h1>
 
       <BeritaAcaraForm mode="create" />
     </div>

@@ -42,18 +42,33 @@ model BeritaAcara {
   tindakLanjut    String?  @db.Text
 
   // Tanda tangan — Pimpinan Unit Kerja
-  ttdPimpinanUnitKerja     String?
+  // @db.LongText -> base64 data URI (data:image/png;base64,...) bisa panjang,
+  // VARCHAR(191) bawaan bakal error/truncate.
+  ttdPimpinanUnitKerja     String? @db.LongText
   namaPimpinanUnitKerja    String?
   nipPimpinanUnitKerja     String?
   jabatanPimpinanUnitKerja String?
 
   // Tanda tangan — Pimpinan IT
-  ttdPimpinanIT  String?
-  namaPimpinanIT String?
+  ttdPimpinanIT     String? @db.LongText
+  namaPimpinanIT    String?
+  nipPimpinanIT     String?
+  jabatanPimpinanIT String?
 
-  // Path dokumen di MinIO
-  docxPath String?
-  pdfPath  String?
+  // Tanda tangan — Petugas Stock Opname (muncul di footer halaman lampiran)
+  ttdPetugas     String? @db.LongText
+  namaPetugas    String?
+  nipPetugas     String?
+  jabatanPetugas String?
+
+  // File dokumen disimpan langsung di database (bukan cloud storage pihak ketiga)
+  docxData Bytes? @db.LongBlob
+  pdfData  Bytes? @db.LongBlob
+
+  // Penanda ringan "dokumen sudah pernah digenerate", dipakai di halaman
+  // list biar nggak perlu fetch pdfData/docxData (bisa besar) cuma buat
+  // nentuin tombol Download vs Generate yang ditampilkan.
+  hasDocument Boolean @default(false)
 
   // Ditandai true setiap kali data di-PATCH, supaya dokumen lama
   // nggak ke-download padahal isinya udah basi. Di-set false lagi

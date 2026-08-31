@@ -56,7 +56,7 @@ export class BeritaAcaraController {
   }
 
   @Post(':id/generate')
-  @ApiOperation({ summary: 'Generate PDF & DOCX, simpan ke MinIO' })
+  @ApiOperation({ summary: 'Generate PDF & DOCX, simpan langsung ke database' })
   generate(@Param('id', ParseIntPipe) id: number) {
     return this.baService.generateDocuments(id);
   }

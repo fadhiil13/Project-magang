@@ -61,8 +61,8 @@ export default function SignaturePad({ label, value, onChange, error }: Signatur
       {/* Preview existing value */}
       {hasValue ? (
         <div className="space-y-2">
-          <div className="border border-kai-gray-200 rounded-lg p-3 bg-white">
-            <img src={value!} alt="Tanda tangan" className="max-h-28 mx-auto object-contain" />
+          <div className="border border-kai-gray-200 rounded-lg p-3 bg-white h-[240px] flex items-center justify-center">
+            <img src={value!} alt="Tanda tangan" className="max-h-full max-w-full object-contain" />
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={handleClear}>
             <Trash2 className="w-3.5 h-3.5" /> Ganti
@@ -122,7 +122,7 @@ export default function SignaturePad({ label, value, onChange, error }: Signatur
                   ref={sigRef}
                   canvasProps={{
                     className: 'w-full rounded-lg',
-                    style: { width: '100%', height: '150px' },
+                    style: { width: '100%', height: '240px' },
                   }}
                   penColor="black"
                   minWidth={1.5}

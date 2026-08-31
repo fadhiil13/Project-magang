@@ -10,12 +10,10 @@ import toast from 'react-hot-toast';
 import Stepper from './Stepper';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
-import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import SignaturePad from '@/components/signature/SignaturePad';
 import { beritaAcaraSchema, BeritaAcaraFormData, step1Fields, step2Fields } from '@/lib/schemas';
-import { JENIS_ASET_OPTIONS } from '@/lib/constants';
 import { useDebounce } from '@/hooks/useDebounce';
 import api from '@/lib/api';
 import { generateDocument } from '@/lib/download';
@@ -26,15 +24,16 @@ interface BeritaAcaraFormProps {
   initialData?: BeritaAcara;
 }
 
-const jenisAsetOptions = JENIS_ASET_OPTIONS.map((j) => ({ value: j, label: j }));
-
 function emptyRow() {
   return {
     nomorInventaris: '',
     serialNumber: '',
     jenisAset: '',
     merek: '',
-    sumberData: '',
+    // Otomatis keisi "support.kai.id" karena hampir selalu itu sumbernya —
+    // biar nggak perlu ngetik ulang tiap tambah baris. Tetap bisa diedit
+    // manual kalau memang beda.
+    sumberData: 'support.kai.id',
     keterangan: '',
   };
 }
@@ -43,6 +42,19 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [savedId, setSavedId] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+
+  // Tombol "Selanjutnya" dan "Simpan" ada di posisi yang sama (kanan bawah).
+  // Kalau user klik dua kali cepat (nggak sengaja), klik ke-2 bisa kena
+  // tombol baru yang baru aja muncul di posisi itu setelah pindah step.
+  // Kunci sebentar biar itu nggak kejadian.
+  useEffect(() => {
+    setTransitioning(true);
+    const t = setTimeout(() => setTransitioning(false), 350);
+    return () => clearTimeout(t);
+  }, [step]);
 
   const form = useForm<BeritaAcaraFormData>({
     resolver: zodResolver(beritaAcaraSchema),
@@ -70,7 +82,13 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
           nipPimpinanUnitKerja: initialData.nipPimpinanUnitKerja || '',
           ttdPimpinanUnitKerja: initialData.ttdPimpinanUnitKerja || '',
           namaPimpinanIT: initialData.namaPimpinanIT || '',
+          jabatanPimpinanIT: initialData.jabatanPimpinanIT || '',
+          nipPimpinanIT: initialData.nipPimpinanIT || '',
           ttdPimpinanIT: initialData.ttdPimpinanIT || '',
+          namaPetugas: initialData.namaPetugas || '',
+          jabatanPetugas: initialData.jabatanPetugas || '',
+          nipPetugas: initialData.nipPetugas || '',
+          ttdPetugas: initialData.ttdPetugas || '',
         }
       : {
           noRef: '',
@@ -87,7 +105,13 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
           nipPimpinanUnitKerja: '',
           ttdPimpinanUnitKerja: '',
           namaPimpinanIT: '',
+          jabatanPimpinanIT: '',
+          nipPimpinanIT: '',
           ttdPimpinanIT: '',
+          namaPetugas: '',
+          jabatanPetugas: '',
+          nipPetugas: '',
+          ttdPetugas: '',
         },
   });
 
@@ -123,29 +147,13 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
         await api.patch(`/berita-acara/${id}`, data);
       }
 
-      // Generate dokumen — kalau gagal, data tetap tersimpan
-      let generateFailed = false;
-      try {
-        await generateDocument(id);
-      } catch {
-        generateFailed = true;
-      }
-
-      if (generateFailed) {
-        toast.success(
-          mode === 'create'
-            ? 'Berita Acara tersimpan, tapi dokumen gagal di-generate'
-            : 'Perubahan tersimpan, tapi dokumen gagal di-generate',
-        );
-      } else {
-        toast.success(
-          mode === 'create'
-            ? 'Berita Acara berhasil dibuat!'
-            : 'Perubahan berhasil disimpan!',
-        );
-      }
-
-      router.push(`/berita-acara/${id}`);
+      // Data tersimpan — tetap di halaman ini, tampilkan pilihan Generate
+      // Dokumen. Nggak langsung pindah ke halaman lain sampai user
+      // memutuskan (generate atau lewati).
+      toast.success(
+        mode === 'create' ? 'Berita Acara berhasil dibuat!' : 'Perubahan berhasil disimpan!',
+      );
+      setSavedId(id);
     } catch (err) {
       console.error('Submit failed', err);
 
@@ -192,8 +200,51 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
     }
   };
 
+  const handleGenerateNow = async () => {
+    if (!savedId) return;
+    setGenerating(true);
+    try {
+      await generateDocument(savedId);
+      toast.success('Dokumen berhasil digenerate!');
+    } catch {
+      toast.error('Gagal generate dokumen. Coba generate ulang dari halaman detail.');
+    } finally {
+      setGenerating(false);
+      router.push(`/berita-acara/${savedId}`);
+    }
+  };
+
+  // Data sudah tersimpan — tampilkan panel konfirmasi + pilihan Generate,
+  // gantikan form. Nggak pindah halaman sampai user memutuskan.
+  if (savedId !== null) {
+    return (
+      <Card>
+        <div className="text-center py-8 space-y-4">
+          <p className="text-lg font-semibold text-kai-black">
+            ✅ Data berhasil {mode === 'create' ? 'dibuat' : 'disimpan'}!
+          </p>
+          <p className="text-kai-gray-500 text-sm">
+            Sekarang generate dokumen PDF & DOCX-nya, atau lewati dan lanjut ke halaman detail.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push(`/berita-acara/${savedId}`)}
+            >
+              Lewati, ke Detail
+            </Button>
+            <Button type="button" loading={generating} onClick={handleGenerateNow}>
+              Generate Dokumen
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <Stepper currentStep={step} onStepClick={(s) => validateStep(s)} />
 
       <Card>
@@ -204,7 +255,12 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
         {/* Navigation */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-kai-gray-200">
           {step > 1 ? (
-            <Button type="button" variant="secondary" onClick={() => setStep(step - 1)}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={transitioning}
+              onClick={() => setStep(step - 1)}
+            >
               ← Kembali
             </Button>
           ) : (
@@ -212,12 +268,17 @@ export default function BeritaAcaraForm({ mode, initialData }: BeritaAcaraFormPr
           )}
 
           {step < 3 ? (
-            <Button type="button" onClick={() => validateStep(step + 1)}>
+            <Button type="button" disabled={transitioning} onClick={() => validateStep(step + 1)}>
               Selanjutnya →
             </Button>
           ) : (
-            <Button type="submit" loading={submitting}>
-              💾 {mode === 'create' ? 'Simpan & Generate' : 'Simpan Perubahan'}
+            <Button
+              type="button"
+              loading={submitting}
+              disabled={transitioning}
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              💾 {mode === 'create' ? 'Simpan' : 'Simpan Perubahan'}
             </Button>
           )}
         </div>
@@ -367,11 +428,9 @@ function AsetRowFields({
   const rowErrors = errors.asetRows?.[index];
 
   const nomorInv = watch(`asetRows.${index}.nomorInventaris`);
-  const jenisAset = watch(`asetRows.${index}.jenisAset`);
   const debouncedNomor = useDebounce(nomorInv, 500);
 
   const [suggestion, setSuggestion] = useState<AsetSearchResult | null>(null);
-  const [showLainnya, setShowLainnya] = useState(false);
 
   // Smart lookup
   useEffect(() => {
@@ -404,11 +463,6 @@ function AsetRowFields({
     setValue(`asetRows.${index}.merek`, suggestion.merek);
     setSuggestion(null);
   };
-
-  // Handle "Lainnya" jenis aset
-  useEffect(() => {
-    setShowLainnya(jenisAset === 'Lainnya');
-  }, [jenisAset]);
 
   return (
     <div className="relative border border-kai-gray-200 rounded-lg p-4 bg-kai-gray-50">
@@ -478,26 +532,12 @@ function AsetRowFields({
           {...register(`asetRows.${index}.serialNumber`)}
         />
 
-        <div>
-          <Select
-            label="Jenis Aset *"
-            placeholder="Pilih jenis"
-            options={jenisAsetOptions}
-            error={rowErrors?.jenisAset?.message}
-            {...register(`asetRows.${index}.jenisAset`)}
-          />
-          {showLainnya && (
-            <Input
-              placeholder="Ketik jenis aset lainnya..."
-              className="mt-2"
-              onChange={(e) => {
-                if (e.target.value) {
-                  setValue(`asetRows.${index}.jenisAset`, e.target.value);
-                }
-              }}
-            />
-          )}
-        </div>
+        <Input
+          label="Jenis Aset *"
+          placeholder="PC Desktop, Notebook, Printer..."
+          error={rowErrors?.jenisAset?.message}
+          {...register(`asetRows.${index}.jenisAset`)}
+        />
 
         <Input
           label="Merek *"
@@ -537,7 +577,7 @@ function Step3({ form }: { form: UseFormReturn<BeritaAcaraFormData> }) {
     <div className="space-y-5">
       <h2 className="text-lg font-semibold text-kai-black">Step 3 dari 3: Tanda Tangan</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Pimpinan Unit Kerja */}
         <div className="space-y-3 border border-kai-gray-200 rounded-lg p-4">
           <h3 className="font-semibold text-kai-black text-sm">Pimpinan Unit Kerja</h3>
@@ -568,11 +608,39 @@ function Step3({ form }: { form: UseFormReturn<BeritaAcaraFormData> }) {
             placeholder="Nama pengelola aset TI"
             {...register('namaPimpinanIT')}
           />
+          <Input
+            label="Jabatan"
+            placeholder="Pengelola Aset TI..."
+            {...register('jabatanPimpinanIT')}
+          />
+          <Input label="NIP" placeholder="41380" {...register('nipPimpinanIT')} />
           <SignaturePad
             label="Tanda Tangan"
             value={watch('ttdPimpinanIT') || null}
             onChange={(val) => setValue('ttdPimpinanIT', val || '')}
             error={errors.ttdPimpinanIT?.message}
+          />
+        </div>
+
+        {/* Petugas Stock Opname */}
+        <div className="space-y-3 border border-kai-gray-200 rounded-lg p-4">
+          <h3 className="font-semibold text-kai-black text-sm">Petugas Stock Opname</h3>
+          <Input
+            label="Nama"
+            placeholder="Nama petugas IT stock opname"
+            {...register('namaPetugas')}
+          />
+          <Input
+            label="Jabatan"
+            placeholder="Staff IT..."
+            {...register('jabatanPetugas')}
+          />
+          <Input label="NIP" placeholder="41381" {...register('nipPetugas')} />
+          <SignaturePad
+            label="Tanda Tangan"
+            value={watch('ttdPetugas') || null}
+            onChange={(val) => setValue('ttdPetugas', val || '')}
+            error={errors.ttdPetugas?.message}
           />
         </div>
       </div>

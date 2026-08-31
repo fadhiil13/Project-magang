@@ -5,8 +5,8 @@ export const asetRowSchema = z.object({
   serialNumber: z.string().min(1, 'Serial number wajib diisi'),
   jenisAset: z.string().min(1, 'Jenis aset wajib dipilih'),
   merek: z.string().min(1, 'Merek wajib diisi'),
-  sumberData: z.string().min(1, 'Sumber data wajib diisi'),
-  keterangan: z.string().min(1, 'Keterangan wajib diisi'),
+  sumberData: z.string().optional(),
+  keterangan: z.string().optional(),
 });
 
 export const beritaAcaraSchema = z.object({
@@ -28,7 +28,13 @@ export const beritaAcaraSchema = z.object({
   nipPimpinanUnitKerja: z.string().optional(),
   ttdPimpinanUnitKerja: z.string().optional(),
   namaPimpinanIT: z.string().optional(),
+  jabatanPimpinanIT: z.string().optional(),
+  nipPimpinanIT: z.string().optional(),
   ttdPimpinanIT: z.string().optional(),
+  namaPetugas: z.string().optional(),
+  jabatanPetugas: z.string().optional(),
+  nipPetugas: z.string().optional(),
+  ttdPetugas: z.string().optional(),
 });
 
 export type BeritaAcaraFormData = z.infer<typeof beritaAcaraSchema>;

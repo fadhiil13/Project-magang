@@ -25,6 +25,21 @@ export class DocumentService {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'domcontentloaded' });
 
+      // Samain tinggi kotak Analisa & Tindak Lanjut biar keliatan seimbang
+      // walau isinya beda panjang (atau salah satunya kosong) — diukur dari
+      // render beneran (bukan nebak), lalu dipaksa sama-sama setinggi yang
+      // paling tinggi di antara keduanya.
+      await page.evaluate(() => {
+        const boxes = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-role="analisa-box"], [data-role="tindak-box"]'),
+        );
+        if (boxes.length === 0) return;
+        const maxHeight = Math.max(...boxes.map((el) => el.getBoundingClientRect().height));
+        boxes.forEach((el) => {
+          el.style.minHeight = `${maxHeight}px`;
+        });
+      });
+
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
@@ -64,14 +79,24 @@ export class DocumentService {
       this.logger.warn(`Logo tidak ditemukan di ${logoPath} — PDF akan pakai fallback teks "KAI"`);
     }
 
+    // Badge "TERBATAS" — kalau ada file gambar di templates/terbatas.png,
+    // dipakai apa adanya (misal stempel/logo custom). Kalau nggak ada,
+    // fallback ke teks + highlight kuning lewat CSS (.terbatas).
+    const terbatasPath = path.join(__dirname, 'templates', 'terbatas.png');
+    let terbatasBase64 = '';
+    if (fs.existsSync(terbatasPath)) {
+      terbatasBase64 = `data:image/png;base64,${fs.readFileSync(terbatasPath).toString('base64')}`;
+    }
+
     const ttdUK = data.ttdPimpinanUnitKerja || '';
     const ttdIT = data.ttdPimpinanIT || '';
+    const ttdPetugas = data.ttdPetugas || '';
 
     let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${this.getPdfStyles()}</style></head><body>`;
 
     // ── HALAMAN 1: Form utama ──
     html += `<div class="page">`;
-    html += this.buildPdfHeader(data, logoBase64, 1, totalPages, tanggalShort);
+    html += this.buildPdfHeader(data, logoBase64, terbatasBase64, 1, totalPages, tanggalShort);
     html += `
       <div class="content">
         <p class="section-num">I. <b>Pelaksanaan Stock Opname</b></p>
@@ -85,18 +110,18 @@ export class DocumentService {
 
         <p class="section-num" style="margin-top:16px;">II. <b>Analisa &amp; Tindak Lanjut</b></p>
 
-        <div class="bordered-box">
+        <div class="bordered-box" data-role="analisa-box">
           <p class="underline-italic">Analisa:</p>
           <p>${this.escapeHtml(data.analisa || '').replace(/\n/g, '<br>')}</p>
         </div>
-        <div class="bordered-box">
+        <div class="bordered-box" data-role="tindak-box">
           <p class="underline-italic">Tindak Lanjut:</p>
           <p>${data.tindakLanjut ? this.escapeHtml(data.tindakLanjut).replace(/\n/g, '<br>') : '&nbsp;'}</p>
         </div>
 
         <p style="margin-top:16px;">Demikian Berita Acara ini dibuat dengan sebenarnya untuk dapat digunakan sebagaimana mestinya.</p>
 
-        <p style="text-align:right;margin-top:12px;">${this.escapeHtml(data.tempatKedudukan || '....................')},  ${this.escapeHtml(tanggalLong)}</p>
+        <p style="text-align:right;margin-top:28px;">${this.escapeHtml(data.tempatKedudukan || '....................')},  ${this.escapeHtml(tanggalLong)}</p>
 
         <table class="ttd-table">
           <tr>
@@ -109,9 +134,10 @@ export class DocumentService {
             </td>
             <td>
               <p>Pimpinan IT Kantor Pusat/Daerah</p>
-              <p>(Pengelola Aset TI)</p>
+              <p>${this.escapeHtml(data.jabatanPimpinanIT || '(Pengelola Aset TI)')}</p>
               <div class="ttd-space">${ttdIT ? `<img src="${ttdIT}" class="ttd-img"/>` : ''}</div>
               <p class="ttd-name">(${this.escapeHtml(data.namaPimpinanIT || '___________________')})</p>
+              <p>${this.escapeHtml(data.nipPimpinanIT || '')}</p>
             </td>
           </tr>
         </table>
@@ -124,7 +150,7 @@ export class DocumentService {
       const startNo = ci * 12 + 1;
 
       html += `<div class="page">`;
-      html += this.buildPdfHeader(data, logoBase64, pageNum, totalPages, tanggalShort);
+      html += this.buildPdfHeader(data, logoBase64, terbatasBase64, pageNum, totalPages, tanggalShort);
       html += `
         <div class="content">
           <p style="text-align:right;font-size:8pt;font-style:italic;">
@@ -162,8 +188,12 @@ export class DocumentService {
           </table>
 
           <div style="text-align:right;margin-top:auto;padding-top:40px;">
-            <div style="display:inline-block;text-align:center;border:1px solid #000;padding:4px 12px;">
-              Petugas IT Stock Opname
+            <div style="display:inline-block;text-align:center;padding:4px 10px;min-width:110px;font-size:8pt;">
+              <p>Petugas IT Stock Opname</p>
+              ${data.jabatanPetugas ? `<p>${this.escapeHtml(data.jabatanPetugas)}</p>` : ''}
+              <div class="ttd-space" style="height:28px;margin-top:6px;">${ttdPetugas ? `<img src="${ttdPetugas}" class="ttd-img" style="max-height:26px;max-width:80px;"/>` : ''}</div>
+              <p class="ttd-name" style="margin-top:0;">(${this.escapeHtml(data.namaPetugas || '___________________')})</p>
+              <p>${this.escapeHtml(data.nipPetugas || '')}</p>
             </div>
           </div>
         </div>
@@ -177,6 +207,7 @@ export class DocumentService {
   private buildPdfHeader(
     data: any,
     logo: string,
+    terbatas: string,
     page: number,
     total: number,
     tanggal: string,
@@ -184,7 +215,7 @@ export class DocumentService {
     return `
       <table class="header-main">
         <tr>
-          <td rowspan="4" class="logo-cell">${
+          <td rowspan="2" class="logo-cell">${
             logo
               ? `<img src="${logo}" class="logo"/>`
               : '<b style="font-size:20pt;color:#2D2B70;">KAI</b>'
@@ -196,8 +227,12 @@ export class DocumentService {
         </tr>
         <tr><td class="info-label">Tanggal</td><td class="info-value">13 April 2021</td></tr>
         <tr>
+          <td rowspan="2" class="logo-cell">${
+            terbatas
+              ? `<img src="${terbatas}" class="terbatas-img"/>`
+              : '<span class="terbatas">TERBATAS</span>'
+          }</td>
           <td rowspan="2" class="title-cell">
-            <span class="terbatas">TERBATAS</span><br>
             <b>FORMULIR BERITA ACARA<br>STOCK OPNAME ASET TEKNOLOGI INFORMASI</b>
           </td>
           <td class="info-label">Versi</td><td class="info-value">001-2021</td>
@@ -221,16 +256,18 @@ export class DocumentService {
       .content { flex: 1; }
       .header-main { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 6px; }
       .header-main td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; vertical-align: middle; }
-      .logo-cell { width: 70px; text-align: center; }
-      .logo { height: 50px; }
+      .logo-cell { width: 100px; text-align: center; padding: 4px !important; }
+      .logo { width: 90px; height: auto; display: block; margin: 0 auto; }
       .title-cell { text-align: center; }
       .info-label { width: 55px; font-weight: bold; background: #f5f5f5; font-size: 8pt; }
       .info-value { width: 150px; font-size: 8pt; }
       .terbatas { display: inline-block; background: #FFE500; color: #000; padding: 1px 10px; font-weight: bold; font-size: 9pt; }
-      .ref-box { border-collapse: collapse; margin-bottom: 10px; }
+      .terbatas-img { width: 90px; height: auto; display: block; margin: 0 auto; }
+      .ref-box { border-collapse: collapse; margin-bottom: 10px; width: 260px; }
       .ref-box td { border: 1px solid #000; padding: 2px 6px; font-size: 10pt; }
-      .ref-box td:first-child { width: 90px; }
-      .ref-box td:nth-child(2) { width: 15px; text-align: center; }
+      .ref-box td:first-child { width: 95px; white-space: nowrap; }
+      .ref-box td:nth-child(2) { width: 12px; text-align: center; }
+      .ref-box td:nth-child(3) { width: 153px; }
       .section-num { margin: 8px 0 4px 0; font-size: 11pt; }
       .indent { margin-left: 24px; margin-bottom: 8px; }
       .info-fields { margin-left: 40px; border-collapse: collapse; }
@@ -239,9 +276,9 @@ export class DocumentService {
       .info-fields .colon { width: 15px; text-align: center; }
       .bordered-box { border: 1px solid #000; padding: 8px 10px; margin: 6px 0 6px 24px; min-height: 50px; }
       .underline-italic { font-style: italic; text-decoration: underline; margin-bottom: 6px; }
-      .ttd-table { width: 70%; margin: 10px auto 0; }
+      .ttd-table { width: 70%; margin: 28px auto 0; }
       .ttd-table td { width: 50%; text-align: center; vertical-align: top; padding: 4px; }
-      .ttd-space { height: 60px; display: flex; align-items: center; justify-content: center; }
+      .ttd-space { height: 60px; display: flex; align-items: center; justify-content: center; margin-top: 18px; }
       .ttd-img { max-height: 55px; max-width: 120px; }
       .ttd-name { font-weight: bold; }
       .aset-table { width: 100%; border-collapse: collapse; }
@@ -303,16 +340,22 @@ export class DocumentService {
       ).padStart(2, '0')} / ${tgl.getFullYear()}`;
       const totalPages = 1 + Math.ceil(data.asetRows.length / 12);
 
-      this.editHeaderXml(unpackDir, tanggalShort, totalPages);
+      this.editHeaderXml(unpackDir, data, tanggalShort, totalPages);
       this.editDocumentXml(unpackDir, data, tanggalLong);
+      this.editFooterXml(unpackDir, data);
 
       // Rezip
       if (process.platform === 'win32') {
+        // Compress-Archive juga cuma mau nulis ke .zip — sama seperti extract,
+        // compress dulu ke output.zip lalu copy jadi output.docx.
+        const outputZip = path.join(tmpDir, 'output.zip');
+        if (fs.existsSync(outputZip)) fs.unlinkSync(outputZip);
         if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
         execSync(
-          `powershell -NoProfile -Command "Compress-Archive -Path '${unpackDir}\\*' -DestinationPath '${outputPath}' -Force"`,
+          `powershell -NoProfile -Command "Compress-Archive -Path '${unpackDir}\\*' -DestinationPath '${outputZip}' -Force"`,
           { stdio: 'pipe' },
         );
+        fs.copyFileSync(outputZip, outputPath);
       } else {
         execSync(`cd "${unpackDir}" && rm -f "${outputPath}" && zip -Xr "${outputPath}" .`, {
           stdio: 'pipe',
@@ -325,7 +368,32 @@ export class DocumentService {
     }
   }
 
-  private editHeaderXml(unpackDir: string, tanggal: string, totalPages: number) {
+  private editFooterXml(unpackDir: string, data: any) {
+    const footerPath = path.join(unpackDir, 'word', 'footer1.xml');
+    if (!fs.existsSync(footerPath)) return;
+
+    let xml = fs.readFileSync(footerPath, 'utf-8');
+
+    // Kotak "Petugas IT Stock Opname" di footer punya baris kosong di
+    // bawah labelnya (untuk spasi TTD lalu nama). Isi paragraf KEDUA
+    // (index 1) dengan nama petugas — sama gaya "( nama )" seperti dua
+    // TTD lain. Gambar TTD sendiri belum di-render di DOCX (baru ada di
+    // PDF), konsisten dengan Pimpinan Unit Kerja/IT yang juga cuma
+    // nama teks di DOCX.
+    const marker = 'Opname</w:t>';
+    const markerPos = xml.indexOf(marker);
+    if (markerPos !== -1) {
+      const target = this.nthParagraphAfter(xml, markerPos, 1);
+      if (target) {
+        const value = data.namaPetugas ? `( ${data.namaPetugas} )` : '';
+        xml = this.replaceParagraphInner(xml, target.openEnd, target.closeIdx, value).xml;
+      }
+    }
+
+    fs.writeFileSync(footerPath, xml, 'utf-8');
+  }
+
+  private editHeaderXml(unpackDir: string, data: any, tanggalShort: string, totalPages: number) {
     for (const headerFile of ['header1.xml', 'header2.xml']) {
       const headerPath = path.join(unpackDir, 'word', headerFile);
       if (!fs.existsSync(headerPath)) continue;
@@ -339,8 +407,15 @@ export class DocumentService {
         xml = xml.replace(/2 dari 2/g, `2 dari ${totalPages}`);
       }
 
-      xml = this.replaceXmlText(xml, '___ /___ /______', tanggal);
-      xml = this.replaceXmlText(xml, '___/___/______', tanggal);
+      // No. Ref / Tanggal / Business Area (kotak ref di bawah judul formulir).
+      // Dicari berurutan (cursor maju), karena "Tanggal" juga muncul di baris
+      // revisi dokumen ("Tanggal 13 April 2021") duluan di atasnya — kalau
+      // dicari dari awal dokumen, bisa salah timpa baris itu.
+      const filler = this.createSequentialFiller(xml);
+      filler.fill('<w:t>No. Ref</w:t>', 1, data.noRef);
+      filler.fill('>Tanggal<', 1, tanggalShort);
+      filler.fill('Business Area', 1, data.businessArea);
+      xml = filler.result();
 
       fs.writeFileSync(headerPath, xml, 'utf-8');
     }
@@ -350,19 +425,25 @@ export class DocumentService {
     const docPath = path.join(unpackDir, 'word', 'document.xml');
     let xml = fs.readFileSync(docPath, 'utf-8');
 
-    // Section I: Tempat Kedudukan
-    xml = this.replaceXmlTextPattern(
-      xml,
-      /Kantor Pusat \/ DAOP[^<]*/,
-      this.escapeXml(data.tempatKedudukan),
-    );
+    // Section I: Tanggal Stock Opname / Unit Kerja / Tempat Kedudukan.
+    // Ketiga cell value-nya ditandai border bawah putus-putus (dotted) yang
+    // sama persis di template, jadi dicari berdasar urutan kemunculannya
+    // (occurrence 0/1/2), bukan cocokin teks label — labelnya sering
+    // kepecah jadi beberapa <w:t> terpisah gara-gara spell-check Word,
+    // jadi regex teks-mentah gampang gagal cocok.
+    const dottedCellBorder = 'w:bottom w:val="dotted" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>';
+    xml = this.setCellValueAfterMarker(xml, dottedCellBorder, 0, tanggalLong);
+    xml = this.setCellValueAfterMarker(xml, dottedCellBorder, 1, data.unitKerja);
+    xml = this.setCellValueAfterMarker(xml, dottedCellBorder, 2, data.tempatKedudukan);
 
-    // Section II: Analisa
-    xml = this.replaceXmlTextPattern(
-      xml,
-      /Detail Data Aset TI dituangkan[^<]*/,
-      this.escapeXml((data.analisa || '').replace(/\n/g, ' ')),
-    );
+    // Section II: Analisa (ganti semua paragraf antara label "Analisa:" dan
+    // "Tindak Lanjut:" dengan isi data.analisa, satu paragraf per baris).
+    const analisaLines = (data.analisa || '').split('\n');
+    xml = this.replaceParagraphsBetween(xml, 'Analisa:</w:t>', 'Tindak Lanjut:', analisaLines);
+
+    // Tindak Lanjut (ganti semua paragraf antara label ini dan penutup tabel).
+    const tindakLines = (data.tindakLanjut || '-').split('\n');
+    xml = this.replaceParagraphsBetween(xml, 'Tindak Lanjut:</w:t>', '</w:tbl>', tindakLines);
 
     // Tanggal & kota di baris tanda tangan
     xml = this.replaceXmlTextPattern(
@@ -412,6 +493,143 @@ export class DocumentService {
     fs.writeFileSync(docPath, xml, 'utf-8');
   }
 
+  // ============================================================
+  // XML STRUCTURAL HELPERS (bukan cari-teks-mentah — navigasi struktur
+  // <w:p>/<w:tc> biar nggak gagal gara-gara teks kepecah beberapa <w:t>
+  // akibat spell-check Word)
+  // ============================================================
+
+  private buildRunXml(text: string): string {
+    return `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">${this.escapeXml(text)}</w:t></w:r>`;
+  }
+
+  private buildParagraphXml(text: string): string {
+    return `<w:p>${this.buildRunXml(text)}</w:p>`;
+  }
+
+  /** Index tempat <w:p> (bukan <w:pPr>/<w:pStyle> dst) TERAKHIR sebelum `beforePos`. */
+  private lastParagraphStart(xml: string, beforePos: number): number {
+    const re = /<w:p(?=[ >])/g;
+    let match: RegExpExecArray | null;
+    let last = -1;
+    while ((match = re.exec(xml)) && match.index < beforePos) {
+      last = match.index;
+    }
+    return last;
+  }
+
+  /** Cari [openEnd, closeIdx] dari <w:p> ke-n (0-based) setelah posisi `fromPos`. */
+  private nthParagraphAfter(
+    xml: string,
+    fromPos: number,
+    n: number,
+  ): { openEnd: number; closeIdx: number } | null {
+    let pos = fromPos;
+    let openEnd = -1;
+    let closeIdx = -1;
+    for (let i = 0; i <= n; i++) {
+      const rest = xml.slice(pos);
+      const m = /<w:p(?=[ >])[^>]*>/.exec(rest);
+      if (!m) return null;
+      openEnd = pos + m.index + m[0].length;
+      closeIdx = xml.indexOf('</w:p>', openEnd);
+      if (closeIdx === -1) return null;
+      pos = closeIdx + '</w:p>'.length;
+    }
+    return { openEnd, closeIdx };
+  }
+
+  /** Ganti isi (semua run) sebuah paragraf dengan satu run baru berisi `value`, sambil tetap pertahankan <w:pPr>-nya (formatting). */
+  private replaceParagraphInner(
+    xml: string,
+    openEnd: number,
+    closeIdx: number,
+    value: string,
+  ): { xml: string; insertedLength: number } {
+    const inner = xml.slice(openEnd, closeIdx);
+    const pPrMatch = /^\s*<w:pPr>[\s\S]*?<\/w:pPr>/.exec(inner);
+    const pPr = pPrMatch ? pPrMatch[0] : '';
+    const run = this.buildRunXml(value);
+    return {
+      xml: xml.slice(0, openEnd) + pPr + run + xml.slice(closeIdx),
+      insertedLength: pPr.length + run.length,
+    };
+  }
+
+  /**
+   * Cari kemunculan ke-`occurrenceIndex` dari `marker`, lalu isi paragraf
+   * PERTAMA setelahnya dengan `value` (dipakai untuk cell yang ditandai
+   * fingerprint unik seperti border dotted, bukan lewat teks label).
+   */
+  private setCellValueAfterMarker(
+    xml: string,
+    marker: string,
+    occurrenceIndex: number,
+    value: string,
+  ): string {
+    let searchFrom = 0;
+    let markerPos = -1;
+    for (let i = 0; i <= occurrenceIndex; i++) {
+      markerPos = xml.indexOf(marker, searchFrom);
+      if (markerPos === -1) return xml;
+      searchFrom = markerPos + marker.length;
+    }
+    const target = this.nthParagraphAfter(xml, markerPos, 0);
+    if (!target) return xml;
+    return this.replaceParagraphInner(xml, target.openEnd, target.closeIdx, value).xml;
+  }
+
+  /**
+   * Ganti seluruh paragraf di ANTARA akhir paragraf berisi `afterMarker` dan
+   * awal paragraf berisi `beforeMarker`, dengan satu paragraf baru per baris
+   * di `lines`. Dipakai untuk box Analisa & Tindak Lanjut yang isinya bisa
+   * beberapa paragraf placeholder kosong/statis di template.
+   */
+  private replaceParagraphsBetween(
+    xml: string,
+    afterMarker: string,
+    beforeMarker: string,
+    lines: string[],
+  ): string {
+    const afterPos = xml.indexOf(afterMarker);
+    if (afterPos === -1) return xml;
+    const afterPClose = xml.indexOf('</w:p>', afterPos);
+    if (afterPClose === -1) return xml;
+    const rangeStart = afterPClose + '</w:p>'.length;
+
+    const beforePos = xml.indexOf(beforeMarker, rangeStart);
+    if (beforePos === -1) return xml;
+    const rangeEnd = this.lastParagraphStart(xml, beforePos);
+    if (rangeEnd === -1 || rangeEnd < rangeStart) return xml;
+
+    const safeLines = lines.length > 0 ? lines : [''];
+    const newParagraphs = safeLines.map((l) => this.buildParagraphXml(l)).join('');
+    return xml.slice(0, rangeStart) + newParagraphs + xml.slice(rangeEnd);
+  }
+
+  /**
+   * Filler berurutan: tiap `fill()` nyari marker MULAI DARI posisi hasil
+   * fill sebelumnya (bukan dari awal dokumen). Perlu karena beberapa label
+   * (mis. "Tanggal") muncul lebih dari sekali di header — pencarian dari
+   * awal dokumen bisa salah nimpa kemunculan yang duluan.
+   */
+  private createSequentialFiller(initialXml: string) {
+    let xml = initialXml;
+    let cursor = 0;
+    return {
+      fill: (marker: string, skipParagraphs: number, value: string) => {
+        const markerPos = xml.indexOf(marker, cursor);
+        if (markerPos === -1) return;
+        const target = this.nthParagraphAfter(xml, markerPos, skipParagraphs);
+        if (!target) return;
+        const r = this.replaceParagraphInner(xml, target.openEnd, target.closeIdx, value);
+        xml = r.xml;
+        cursor = target.openEnd + r.insertedLength;
+      },
+      result: () => xml,
+    };
+  }
+
   private buildAsetRowXml(no: number, row: any): string {
     const cells = [
       String(no),
@@ -446,10 +664,6 @@ export class DocumentService {
     return `<w:tr><w:trPr><w:trHeight w:val="300"/></w:trPr>${cellsXml}</w:tr>`;
   }
 
-  private replaceXmlText(xml: string, search: string, replacement: string): string {
-    return xml.replace(new RegExp(this.escapeRegex(search), 'g'), replacement);
-  }
-
   private replaceXmlTextPattern(xml: string, pattern: RegExp, replacement: string): string {
     return xml.replace(pattern, replacement);
   }
@@ -461,9 +675,5 @@ export class DocumentService {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
-  }
-
-  private escapeRegex(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }

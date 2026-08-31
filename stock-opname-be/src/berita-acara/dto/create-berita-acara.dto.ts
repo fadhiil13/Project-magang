@@ -87,7 +87,7 @@ export class CreateBeritaAcaraDto {
   @IsOptional()
   nipPimpinanUnitKerja?: string;
 
-  @ApiPropertyOptional({ description: 'Base64 string atau path file di MinIO' })
+  @ApiPropertyOptional({ description: 'Base64 string tanda tangan (data URI), disimpan langsung ke database' })
   @IsString()
   @IsOptional()
   ttdPimpinanUnitKerja?: string;
@@ -97,10 +97,40 @@ export class CreateBeritaAcaraDto {
   @IsOptional()
   namaPimpinanIT?: string;
 
-  @ApiPropertyOptional({ description: 'Base64 string atau path file di MinIO' })
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  jabatanPimpinanIT?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  nipPimpinanIT?: string;
+
+  @ApiPropertyOptional({ description: 'Base64 string tanda tangan (data URI), disimpan langsung ke database' })
   @IsString()
   @IsOptional()
   ttdPimpinanIT?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  namaPetugas?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  jabatanPetugas?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  nipPetugas?: string;
+
+  @ApiPropertyOptional({ description: 'Base64 string tanda tangan (data URI), disimpan langsung ke database' })
+  @IsString()
+  @IsOptional()
+  ttdPetugas?: string;
 
   @ApiProperty({ type: [CreateAsetRowDto] })
   @IsArray()

@@ -5,7 +5,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { BeritaAcaraModule } from './berita-acara/berita-acara.module';
 import { AsetModule } from './aset/aset.module';
-import { StorageModule } from './storage/storage.module';
 import { DocumentModule } from './document/document.module';
 
 @Module({
@@ -16,7 +15,6 @@ import { DocumentModule } from './document/document.module';
     UsersModule,
     BeritaAcaraModule,
     AsetModule,
-    StorageModule,
     DocumentModule,
   ],
 })

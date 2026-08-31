@@ -11,6 +11,7 @@ import Pagination from '@/components/ui/Pagination';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/lib/auth';
+import { usePageTitle } from '@/lib/pageTitle';
 import { useDebounce } from '@/hooks/useDebounce';
 import api from '@/lib/api';
 import { downloadDocument, printDocument, generateDocument } from '@/lib/download';
@@ -27,14 +28,13 @@ function formatDate(dateStr: string) {
 export default function ListBeritaAcaraPage() {
   const router = useRouter();
   const { isAdmin } = useAuth();
+  usePageTitle('Berita Acara Stock Opname');
 
   const [data, setData] = useState<BeritaAcara[]>([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
+  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 15, totalPages: 0 });
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const debouncedSearch = useDebounce(search, 500);
 
   const [deleteTarget, setDeleteTarget] = useState<BeritaAcara | null>(null);
@@ -45,10 +45,8 @@ export default function ListBeritaAcaraPage() {
     async (page: number) => {
       setLoading(true);
       try {
-        const params: Record<string, string | number> = { page, limit: 10 };
+        const params: Record<string, string | number> = { page, limit: 15 };
         if (debouncedSearch) params.search = debouncedSearch;
-        if (startDate) params.startDate = startDate;
-        if (endDate) params.endDate = endDate;
 
         const res = await api.get<PaginatedResponse<BeritaAcara>>('/berita-acara', { params });
         setData(res.data.data);
@@ -59,7 +57,7 @@ export default function ListBeritaAcaraPage() {
         setLoading(false);
       }
     },
-    [debouncedSearch, startDate, endDate],
+    [debouncedSearch],
   );
 
   useEffect(() => {
@@ -97,15 +95,7 @@ export default function ListBeritaAcaraPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-kai-black">Berita Acara Stock Opname</h1>
-        <Button onClick={() => router.push('/berita-acara/create')}>
-          <Plus className="w-4 h-4" /> Buat Baru
-        </Button>
-      </div>
-
-      {/* Filters */}
+      {/* Filter pencarian + Buat Baru sejajar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <Input
@@ -114,20 +104,9 @@ export default function ListBeritaAcaraPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="sm:w-44"
-          placeholder="Dari tanggal"
-        />
-        <Input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="sm:w-44"
-          placeholder="Sampai tanggal"
-        />
+        <Button onClick={() => router.push('/berita-acara/create')} className="shrink-0">
+          <Plus className="w-4 h-4" /> Buat Baru
+        </Button>
       </div>
 
       {/* Table */}
@@ -156,7 +135,7 @@ export default function ListBeritaAcaraPage() {
                   </tr>
                 ) : (
                   data.map((ba) => {
-                    const hasDoc = ba.docxPath || ba.pdfPath;
+                    const hasDoc = ba.hasDocument;
                     const isGenerating = generatingId === ba.id;
 
                     return (
@@ -190,30 +169,24 @@ export default function ListBeritaAcaraPage() {
 
                             {hasDoc ? (
                               <>
-                                {ba.docxPath && (
-                                  <IconBtn
-                                    title="Download DOCX"
-                                    onClick={() => downloadDocument(ba.id, 'docx')}
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </IconBtn>
-                                )}
-                                {ba.pdfPath && (
-                                  <>
-                                    <IconBtn
-                                      title="Download PDF"
-                                      onClick={() => downloadDocument(ba.id, 'pdf')}
-                                    >
-                                      <FileDown className="w-4 h-4" />
-                                    </IconBtn>
-                                    <IconBtn
-                                      title="Print"
-                                      onClick={() => printDocument(ba.id)}
-                                    >
-                                      <Printer className="w-4 h-4" />
-                                    </IconBtn>
-                                  </>
-                                )}
+                                <IconBtn
+                                  title="Download DOCX"
+                                  onClick={() => downloadDocument(ba.id, 'docx')}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </IconBtn>
+                                <IconBtn
+                                  title="Download PDF"
+                                  onClick={() => downloadDocument(ba.id, 'pdf')}
+                                >
+                                  <FileDown className="w-4 h-4" />
+                                </IconBtn>
+                                <IconBtn
+                                  title="Print"
+                                  onClick={() => printDocument(ba.id)}
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </IconBtn>
                               </>
                             ) : (
                               <IconBtn

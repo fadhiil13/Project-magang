@@ -10,6 +10,7 @@ import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/lib/auth';
+import { usePageTitle } from '@/lib/pageTitle';
 import api from '@/lib/api';
 import { downloadDocument, printDocument, generateDocument } from '@/lib/download';
 import { BeritaAcara } from '@/types';
@@ -33,6 +34,8 @@ export default function DetailBeritaAcaraPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  usePageTitle(ba ? `Berita Acara: ${ba.noRef}` : 'Detail Berita Acara');
 
   const fetchDetail = async () => {
     try {
@@ -85,7 +88,7 @@ export default function DetailBeritaAcaraPage() {
     );
   }
 
-  const hasDoc = ba.docxPath || ba.pdfPath;
+  const hasDoc = ba.hasDocument;
 
   return (
     <div className="space-y-6">
@@ -97,9 +100,8 @@ export default function DetailBeritaAcaraPage() {
         <ArrowLeft className="w-4 h-4" /> Kembali ke daftar
       </button>
 
-      {/* Title + Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-kai-black">Berita Acara: {ba.noRef}</h1>
+      {/* Actions */}
+      <div className="flex justify-end">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => router.push(`/berita-acara/${id}/edit`)}>
             <Pencil className="w-4 h-4" /> Edit
@@ -107,21 +109,15 @@ export default function DetailBeritaAcaraPage() {
 
           {hasDoc ? (
             <>
-              {ba.docxPath && (
-                <Button variant="secondary" size="sm" onClick={() => downloadDocument(id, 'docx')}>
-                  <FileText className="w-4 h-4" /> DOCX
-                </Button>
-              )}
-              {ba.pdfPath && (
-                <>
-                  <Button size="sm" onClick={() => downloadDocument(id, 'pdf')}>
-                    <FileDown className="w-4 h-4" /> PDF
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => printDocument(id)}>
-                    <Printer className="w-4 h-4" /> Print
-                  </Button>
-                </>
-              )}
+              <Button variant="secondary" size="sm" onClick={() => downloadDocument(id, 'docx')}>
+                <FileText className="w-4 h-4" /> DOCX
+              </Button>
+              <Button size="sm" onClick={() => downloadDocument(id, 'pdf')}>
+                <FileDown className="w-4 h-4" /> PDF
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => printDocument(id)}>
+                <Printer className="w-4 h-4" /> Print
+              </Button>
             </>
           ) : (
             <Button size="sm" loading={generating} onClick={handleGenerate}>
@@ -214,7 +210,7 @@ export default function DetailBeritaAcaraPage() {
       {/* Tanda Tangan */}
       <Card>
         <h2 className="text-base font-semibold text-kai-black mb-4">Tanda Tangan</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <SignatureBlock
             title="Pimpinan Unit Kerja"
             subtitle={ba.jabatanPimpinanUnitKerja}
@@ -224,9 +220,17 @@ export default function DetailBeritaAcaraPage() {
           />
           <SignatureBlock
             title="Pimpinan IT"
-            subtitle="Pengelola Aset TI"
+            subtitle={ba.jabatanPimpinanIT || 'Pengelola Aset TI'}
             nama={ba.namaPimpinanIT}
+            nip={ba.nipPimpinanIT}
             ttd={ba.ttdPimpinanIT}
+          />
+          <SignatureBlock
+            title="Petugas Stock Opname"
+            subtitle={ba.jabatanPetugas}
+            nama={ba.namaPetugas}
+            nip={ba.nipPetugas}
+            ttd={ba.ttdPetugas}
           />
         </div>
       </Card>

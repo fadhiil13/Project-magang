@@ -1,30 +1,31 @@
 'use client';
 
 import Image from 'next/image';
-import { LayoutDashboard, FileText, Search, Users, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Search, Users, X, LogOut } from 'lucide-react';
 import SidebarItem from './SidebarItem';
+import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/lib/auth';
 
 interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
+  desktopOpen?: boolean;
 }
 
-export default function Sidebar({ open = false, onClose = () => {} }: SidebarProps) {
-  const { isAdmin } = useAuth();
+export default function Sidebar({ open = false, onClose = () => {}, desktopOpen = true }: SidebarProps) {
+  const { user, isAdmin, logout } = useAuth();
 
   const nav = (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-md bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-9 h-9 rounded-md bg-white flex items-center justify-center overflow-hidden flex-shrink-0 relative">
             <Image
               src="/kai-logo.jpg"
               alt="Logo KAI"
-              width={36}
-              height={36}
-              style={{ width: '36px', height: 'auto' }}
+              fill
+              sizes="36px"
               className="object-contain"
             />
           </div>
@@ -50,18 +51,37 @@ export default function Sidebar({ open = false, onClose = () => {} }: SidebarPro
         )}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/10">
-        <p className="text-white/40 text-xs">&copy; 2024 PT KAI</p>
+      {/* Footer — user info & logout */}
+      <div className="px-3 py-3 border-t border-white/10 space-y-2">
+        {user && (
+          <div className="flex items-center justify-between px-2 py-1.5 rounded-lg">
+            <div className="min-w-0">
+              <p className="text-white text-sm font-medium truncate">{user.nama}</p>
+              <Badge variant={user.role === 'ADMIN' ? 'admin' : 'user'}>{user.role}</Badge>
+            </div>
+            <button
+              onClick={logout}
+              className="p-2 rounded-lg text-white/50 hover:bg-red-500/20 hover:text-red-300 transition-colors shrink-0"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        <p className="text-white/40 text-xs px-2">&copy; 2024 PT KAI</p>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-kai-navy z-40">
-        {nav}
+      {/* Desktop sidebar — bisa di-collapse via toggle di Topbar */}
+      <aside
+        className={`hidden lg:block fixed inset-y-0 left-0 bg-kai-navy z-40 overflow-hidden transition-all duration-200 ${
+          desktopOpen ? 'w-64' : 'w-0'
+        }`}
+      >
+        <div className="w-64 h-full">{nav}</div>
       </aside>
 
       {/* Mobile drawer */}

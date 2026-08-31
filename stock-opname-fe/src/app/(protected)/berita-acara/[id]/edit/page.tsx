@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import BeritaAcaraForm from '@/components/form/BeritaAcaraForm';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Button from '@/components/ui/Button';
+import { usePageTitle } from '@/lib/pageTitle';
 import api from '@/lib/api';
 import { BeritaAcara } from '@/types';
 
@@ -16,6 +17,8 @@ export default function EditBeritaAcaraPage() {
 
   const [data, setData] = useState<BeritaAcara | null>(null);
   const [loading, setLoading] = useState(true);
+
+  usePageTitle(data ? `Edit Berita Acara: ${data.noRef}` : 'Edit Berita Acara');
 
   useEffect(() => {
     api
@@ -46,8 +49,6 @@ export default function EditBeritaAcaraPage() {
       >
         <ArrowLeft className="w-4 h-4" /> Kembali ke detail
       </button>
-
-      <h1 className="text-2xl font-bold text-kai-black">Edit Berita Acara: {data.noRef}</h1>
 
       <BeritaAcaraForm mode="edit" initialData={data} />
     </div>

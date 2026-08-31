@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardList, Monitor, Building2, CalendarDays, ArrowRight } from 'lucide-react';
+import { ClipboardList, Monitor, Building2, CalendarDays, ArrowRight, FileCheck2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import BarList from '@/components/dashboard/BarList';
+import MonthlyTrendChart from '@/components/dashboard/MonthlyTrendChart';
 import { useAuth } from '@/lib/auth';
+import { usePageTitle } from '@/lib/pageTitle';
 import api from '@/lib/api';
 import { DashboardStats, BeritaAcara } from '@/types';
 
@@ -26,6 +29,7 @@ function formatDate(dateStr: string) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  usePageTitle(`Selamat datang, ${user?.nama ?? ''}!`, 'Ringkasan Stock Opname Aset TI');
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recent, setRecent] = useState<BeritaAcara[]>([]);
@@ -53,13 +57,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-kai-black">
-          Selamat datang, {user?.nama}!
-        </h1>
-        <p className="text-kai-gray-500 text-sm mt-1">Ringkasan Stock Opname Aset TI</p>
-      </div>
-
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {statConfig.map((s) => {
@@ -77,6 +74,49 @@ export default function DashboardPage() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Status Dokumen */}
+      <Card>
+        <h2 className="text-base font-semibold text-kai-black mb-4">Status Generate Dokumen</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-100">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+              <FileCheck2 className="w-5 h-5 text-green-700" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-kai-black">{stats?.dokumenSudahDigenerate ?? 0}</p>
+              <p className="text-xs text-kai-gray-500">Sudah digenerate</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-kai-gray-50 border border-kai-gray-200">
+            <div className="w-10 h-10 rounded-full bg-kai-gray-100 flex items-center justify-center shrink-0">
+              <ClipboardList className="w-5 h-5 text-kai-gray-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-kai-black">{stats?.dokumenBelumDigenerate ?? 0}</p>
+              <p className="text-xs text-kai-gray-500">Belum digenerate</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Aset Detail & Statistik */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <h2 className="text-base font-semibold text-kai-black mb-4">Aset per Jenis</h2>
+          <BarList data={stats?.asetByJenis ?? []} color="#F26924" />
+        </Card>
+
+        <Card>
+          <h2 className="text-base font-semibold text-kai-black mb-4">Berita Acara per Business Area</h2>
+          <BarList data={stats?.baByBusinessArea ?? []} color="#2D2B70" />
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <h2 className="text-base font-semibold text-kai-black mb-4">Tren Berita Acara Bulanan</h2>
+          <MonthlyTrendChart data={stats?.trendBulanan ?? []} />
+        </Card>
       </div>
 
       {/* Recent Table */}

@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useDebounce } from '@/hooks/useDebounce';
+import { usePageTitle } from '@/lib/pageTitle';
 import api from '@/lib/api';
 import { AsetSearchResult } from '@/types';
 
@@ -28,6 +29,7 @@ function formatDateShort(dateStr: string) {
 }
 
 export default function AsetSearchPage() {
+  usePageTitle('Cari Aset Teknologi Informasi');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<AsetSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,8 +54,6 @@ export default function AsetSearchPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-kai-black">Cari Aset Teknologi Informasi</h1>
-
       {/* Search bar */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-kai-gray-500" />

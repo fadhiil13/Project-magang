@@ -19,13 +19,12 @@ export default function LoginPage() {
         <div className="bg-white rounded-xl shadow-2xl p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-3">
+            <div className="inline-flex items-center justify-center mb-3 relative w-[140px] h-[70px]">
               <Image
                 src="/kai-logo.jpg"
                 alt="Logo PT KAI"
-                width={140}
-                height={70}
-                style={{ width: '140px', height: 'auto' }}
+                fill
+                sizes="140px"
                 className="object-contain"
                 priority
               />

@@ -36,9 +36,17 @@ export interface BeritaAcara {
   nipPimpinanUnitKerja?: string;
   ttdPimpinanUnitKerja?: string;
   namaPimpinanIT?: string;
+  jabatanPimpinanIT?: string;
+  nipPimpinanIT?: string;
   ttdPimpinanIT?: string;
+  namaPetugas?: string;
+  jabatanPetugas?: string;
+  nipPetugas?: string;
+  ttdPetugas?: string;
   docxPath?: string;
   pdfPath?: string;
+  hasDocument?: boolean;
+  dokumenStale?: boolean;
   userId: number;
   user?: User;
   asetRows: AsetRow[];
@@ -56,11 +64,21 @@ export interface PaginatedResponse<T> {
   };
 }
 
+export interface StatBreakdown {
+  label: string;
+  count: number;
+}
+
 export interface DashboardStats {
   totalBeritaAcara: number;
   totalAset: number;
   totalBusinessArea: number;
   beritaAcaraBulanIni: number;
+  asetByJenis: StatBreakdown[];
+  baByBusinessArea: StatBreakdown[];
+  trendBulanan: StatBreakdown[];
+  dokumenSudahDigenerate: number;
+  dokumenBelumDigenerate: number;
 }
 
 export interface AsetSearchResult {

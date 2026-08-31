@@ -14,6 +14,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/lib/auth';
+import { usePageTitle } from '@/lib/pageTitle';
 import api from '@/lib/api';
 import { User } from '@/types';
 
@@ -50,6 +51,7 @@ const roleOptions = [
 export default function AdminUsersPage() {
   const { user: currentUser, isAdmin } = useAuth();
   const router = useRouter();
+  usePageTitle('Kelola User');
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,8 +154,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-kai-black">Kelola User</h1>
+      <div className="flex justify-end">
         <Button onClick={() => { createForm.reset(); setShowCreate(true); }}>
           <Plus className="w-4 h-4" /> Tambah User
         </Button>
