@@ -278,7 +278,7 @@ export class BeritaAcaraService {
       businessAreas,
       thisMonth,
       byJenis,
-      byBusinessArea,
+      byUnitKerja,
       recentBAs,
       dokumenSudah,
     ] = await Promise.all([
@@ -303,7 +303,7 @@ export class BeritaAcaraService {
         _count: { _all: true },
       }),
       this.prisma.beritaAcara.groupBy({
-        by: ['businessArea'],
+        by: ['unitKerja'],
         where,
         _count: { _all: true },
       }),
@@ -342,8 +342,8 @@ export class BeritaAcaraService {
       asetByJenis: byJenis
         .map((r) => ({ label: r.jenisAset || 'Tidak diketahui', count: r._count._all }))
         .sort((a, b) => b.count - a.count),
-      baByBusinessArea: byBusinessArea
-        .map((r) => ({ label: r.businessArea, count: r._count._all }))
+      baByUnitKerja: byUnitKerja
+        .map((r) => ({ label: r.unitKerja || 'Tidak diketahui', count: r._count._all }))
         .sort((a, b) => b.count - a.count),
       trendBulanan: Array.from(monthlyMap.values()),
       dokumenSudahDigenerate: dokumenSudah,

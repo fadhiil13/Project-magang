@@ -109,8 +109,8 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="text-base font-semibold text-kai-black mb-4">Berita Acara per Business Area</h2>
-          <BarList data={stats?.baByBusinessArea ?? []} color="#2D2B70" />
+          <h2 className="text-base font-semibold text-kai-black mb-4">Berita Acara per Unit Kerja</h2>
+          <BarList data={stats?.baByUnitKerja ?? []} color="#2D2B70" />
         </Card>
 
         <Card className="lg:col-span-2">

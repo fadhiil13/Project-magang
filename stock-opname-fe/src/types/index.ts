@@ -75,7 +75,7 @@ export interface DashboardStats {
   totalBusinessArea: number;
   beritaAcaraBulanIni: number;
   asetByJenis: StatBreakdown[];
-  baByBusinessArea: StatBreakdown[];
+  baByUnitKerja: StatBreakdown[];
   trendBulanan: StatBreakdown[];
   dokumenSudahDigenerate: number;
   dokumenBelumDigenerate: number;
