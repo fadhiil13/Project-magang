@@ -68,7 +68,7 @@ export default function Sidebar({ open = false, onClose = () => {}, desktopOpen 
             </button>
           </div>
         )}
-        <p className="text-white/40 text-xs px-2">&copy; 2024 PT KAI</p>
+        <p className="text-white/40 text-xs px-2">&copy; 2026 PT KAI</p>
       </div>
     </div>
   );
