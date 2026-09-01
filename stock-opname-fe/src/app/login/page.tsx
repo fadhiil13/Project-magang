@@ -35,7 +35,7 @@ export default function LoginPage() {
           <LoginForm />
         </div>
 
-        <p className="text-center text-white/40 text-xs mt-6">&copy; 2024 PT Kereta Api Indonesia</p>
+        <p className="text-center text-white/40 text-xs mt-6">&copy; 2026 PT Kereta Api Indonesia</p>
       </div>
     </div>
   );

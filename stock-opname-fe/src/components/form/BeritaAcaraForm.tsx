@@ -329,7 +329,7 @@ function Step1({ form }: { form: UseFormReturn<BeritaAcaraFormData> }) {
         />
         <Input
           label="Tempat Kedudukan *"
-          placeholder="Contoh: DAOP 7"
+          placeholder="Contoh: Madiun"
           error={errors.tempatKedudukan?.message}
           {...register('tempatKedudukan')}
         />

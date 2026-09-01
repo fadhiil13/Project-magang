@@ -57,7 +57,7 @@ export class CreateBeritaAcaraDto {
   @IsNotEmpty()
   unitKerja: string;
 
-  @ApiProperty({ example: 'DAOP 7' })
+  @ApiProperty({ example: 'Madiun' })
   @IsString()
   @IsNotEmpty()
   tempatKedudukan: string;
